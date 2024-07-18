@@ -1,0 +1,2 @@
+WSDiscovery
+onvif_zeep
