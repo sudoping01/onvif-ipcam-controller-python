@@ -1,21 +1,48 @@
-from time import sleep
 from onvif import ONVIFCamera
 import zeep
+import re
+
+from wsdiscovery.discovery import ThreadedWSDiscovery as WSDiscovery
+from wsdiscovery.publishing import ThreadedWSPublishing as WSPublishing
+from wsdiscovery import QName, Scope
 
 class IpCamController:
-    def __init__(self, ip, port, username, password):
-        self.ip             = ip
-        self.port           = port
-        self.username       = username
-        self.password       = password
-        self.XMAX           =  1
-        self.XMIN           = -1
-        self.YMAX           =  1
-        self.YMIN           = -1
+    def __init__(self):
+        self.XMAX                   =  1
+        self.XMIN                   = -1
+        self.YMAX                   =  1
+        self.YMIN                   = -1
+        self.request                = None 
+        self.ptz                    = None 
+        self.available_onvif_device = []
 
-        self.request        = None 
-        self.ptz            = None 
+    def capture_ip(self,source):
+        ip_pattern = r"http://(\d+\.\d+\.\d+\.\d+)"
 
+        match = re.search(ip_pattern, source)
+
+        if match:
+            self.available_onvif_device.append(match.group(1))
+    
+
+    def search_onvif_device(self):    
+        ttype1 = QName("http://www.onvif.org/ver10/device/wsdl", "Device")
+        scope1 = Scope("onvif://www.onvif.org/Model")
+        xAddr1 = "localhost:8080/abc"
+        wsp = WSPublishing()
+        wsp.start()
+        wsp.publishService(types=[ttype1], scopes=[scope1], xAddrs=[xAddr1])
+        wsd = WSDiscovery()
+        wsd.start()
+        services = wsd.searchServices()
+        probeResponses = []
+
+        for service in services:
+            probeResponses.append(service.getXAddrs()[0])
+        wsd.stop()
+
+        for msg in probeResponses : 
+            self.capture_ip(msg)
 
     def zeep_pythonvalue(self, xmlvalue):
         return xmlvalue
@@ -53,9 +80,9 @@ class IpCamController:
         self.perform_move(ptz, request)
 
 
-    def config(self):
+    def config(self,username, password, port,ip):
     
-        camera = ONVIFCamera(self.ip, self.port, self.username, self.password)
+        camera = ONVIFCamera(ip, port, username, password)
         media = camera.create_media_service()
         self.ptz = camera.create_ptz_service()
 
