@@ -1,5 +1,10 @@
 from onvif import ONVIFCamera
 import zeep
+import re
+
+from wsdiscovery.discovery import ThreadedWSDiscovery as WSDiscovery
+from wsdiscovery.publishing import ThreadedWSPublishing as WSPublishing
+from wsdiscovery import QName, Scope
 
 class IpCamController:
     def __init__(self, ip, port, username, password):
